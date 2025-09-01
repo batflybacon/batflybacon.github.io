@@ -1,49 +1,15 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Users, TrendingUp, TrendingDown } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { useBarNights, UserBalance, BarNight } from "@/hooks/useBarNights";
+import BarNightDetailsModal from "./BarNightDetailsModal";
 
-interface User {
-  id: string;
-  name: string;
-  balance: number;
+interface DashboardProps {
+  onSignOut: () => void;
 }
 
-interface BarNight {
-  id: string;
-  date: string;
-  totalAmount: number;
-  participants: string[];
-  paidBy: { [userId: string]: number };
-}
-
-const mockUsers: User[] = [
-  { id: "1", name: "Anna", balance: 15.50 },
-  { id: "2", name: "Ben", balance: -8.20 },
-  { id: "3", name: "Clara", balance: 3.70 },
-  { id: "4", name: "David", balance: -11.00 },
-];
-
-const mockBarNights: BarNight[] = [
-  {
-    id: "1",
-    date: "2024-01-15",
-    totalAmount: 89.50,
-    participants: ["1", "2", "3", "4"],
-    paidBy: { "1": 89.50 }
-  },
-  {
-    id: "2", 
-    date: "2024-01-08",
-    totalAmount: 67.20,
-    participants: ["1", "2", "3"],
-    paidBy: { "2": 67.20 }
-  },
-];
-
-export default function Dashboard() {
-  const [users] = useState<User[]>(mockUsers);
-  const [barNights] = useState<BarNight[]>(mockBarNights);
+export default function Dashboard({ onSignOut }: DashboardProps) {
+  const { userBalances, barNights, profiles, loading } = useBarNights();
+  const [selectedBarNight, setSelectedBarNight] = useState<BarNight | null>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('de-DE', {
@@ -66,45 +32,34 @@ export default function Dashboard() {
     return "text-muted-foreground";
   };
 
-  const getBalanceIcon = (balance: number) => {
-    if (balance > 0) return <TrendingUp className="w-4 h-4" />;
-    if (balance < 0) return <TrendingDown className="w-4 h-4" />;
-    return null;
+  const handleBarNightUpdate = (data: any) => {
+    // TODO: Implement update functionality
+    console.log("Update bar night:", data);
+    setSelectedBarNight(null);
   };
 
-  const totalBalance = users.reduce((sum, user) => sum + user.balance, 0);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-muted-foreground">Lädt...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="text-center py-4">
+      <div className="text-center py-4 flex justify-between items-center">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Bar Kosten
+          Batfly Bacon
         </h1>
-        <p className="text-muted-foreground mt-2">Freundeskreis Salden</p>
+        <button 
+          onClick={onSignOut}
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Abmelden
+        </button>
       </div>
-
-      {/* Summary Card */}
-      <Card className="bg-gradient-to-br from-card to-secondary/20 shadow-lg">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary" />
-            Gesamt-Übersicht
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Teilnehmer</p>
-              <p className="text-2xl font-bold">{users.length}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Abende insgesamt</p>
-              <p className="text-2xl font-bold">{barNights.length}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* User Balances */}
       <div className="space-y-3">
@@ -113,31 +68,20 @@ export default function Dashboard() {
           Aktuelle Salden
         </h2>
         <div className="space-y-3">
-          {users.map((user) => (
-            <Card key={user.id} className="transition-all duration-300 hover:shadow-md">
+          {userBalances.map((userBalance) => (
+            <Card key={userBalance.user.id} className="transition-all duration-300 hover:shadow-md">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center font-semibold text-primary">
-                      {user.name.charAt(0)}
+                      {userBalance.user.display_name.charAt(0)}
                     </div>
-                    <span className="font-medium">{user.name}</span>
+                    <span className="font-medium">{userBalance.user.display_name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {getBalanceIcon(user.balance)}
-                    <span className={`text-lg font-bold ${getBalanceColor(user.balance)}`}>
-                      {formatCurrency(user.balance)}
+                    <span className={`text-lg font-bold ${getBalanceColor(userBalance.balance)}`}>
+                      {formatCurrency(userBalance.balance)}
                     </span>
-                    {user.balance > 0 && (
-                      <Badge variant="secondary" className="bg-success/20 text-success">
-                        Guthaben
-                      </Badge>
-                    )}
-                    {user.balance < 0 && (
-                      <Badge variant="destructive" className="bg-danger/20 text-danger">
-                        Schulden
-                      </Badge>
-                    )}
                   </div>
                 </div>
               </CardContent>
@@ -154,7 +98,11 @@ export default function Dashboard() {
         </h2>
         <div className="space-y-3">
           {barNights.map((night) => (
-            <Card key={night.id} className="transition-all duration-300 hover:shadow-md">
+            <Card 
+              key={night.id} 
+              className="transition-all duration-300 hover:shadow-md cursor-pointer"
+              onClick={() => setSelectedBarNight(night)}
+            >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -165,7 +113,7 @@ export default function Dashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold text-primary">
-                      {formatCurrency(night.totalAmount)}
+                      {formatCurrency(night.total_amount)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Gesamt ausgegeben
@@ -177,6 +125,15 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      {selectedBarNight && (
+        <BarNightDetailsModal
+          barNight={selectedBarNight}
+          profiles={profiles}
+          onClose={() => setSelectedBarNight(null)}
+          onUpdate={handleBarNightUpdate}
+        />
+      )}
     </div>
   );
 }

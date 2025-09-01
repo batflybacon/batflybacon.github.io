@@ -14,7 +14,188 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bar_night_participants: {
+        Row: {
+          bar_night_id: string
+          created_at: string
+          id: string
+          participant_id: string
+          share_amount: number
+        }
+        Insert: {
+          bar_night_id: string
+          created_at?: string
+          id?: string
+          participant_id: string
+          share_amount?: number
+        }
+        Update: {
+          bar_night_id?: string
+          created_at?: string
+          id?: string
+          participant_id?: string
+          share_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bar_night_participants_bar_night_id_fkey"
+            columns: ["bar_night_id"]
+            isOneToOne: false
+            referencedRelation: "bar_nights"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bar_night_payments: {
+        Row: {
+          amount: number
+          bar_night_id: string
+          created_at: string
+          id: string
+          payer_id: string
+        }
+        Insert: {
+          amount: number
+          bar_night_id: string
+          created_at?: string
+          id?: string
+          payer_id: string
+        }
+        Update: {
+          amount?: number
+          bar_night_id?: string
+          created_at?: string
+          id?: string
+          payer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bar_night_payments_bar_night_id_fkey"
+            columns: ["bar_night_id"]
+            isOneToOne: false
+            referencedRelation: "bar_nights"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bar_nights: {
+        Row: {
+          created_at: string
+          created_by: string
+          date: string
+          id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          date?: string
+          id?: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          date?: string
+          id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      individual_item_participants: {
+        Row: {
+          created_at: string
+          id: string
+          individual_item_id: string
+          participant_id: string
+          share_amount: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          individual_item_id: string
+          participant_id: string
+          share_amount?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          individual_item_id?: string
+          participant_id?: string
+          share_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "individual_item_participants_individual_item_id_fkey"
+            columns: ["individual_item_id"]
+            isOneToOne: false
+            referencedRelation: "individual_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      individual_items: {
+        Row: {
+          amount: number
+          bar_night_id: string
+          created_at: string
+          description: string
+          id: string
+        }
+        Insert: {
+          amount: number
+          bar_night_id: string
+          created_at?: string
+          description: string
+          id?: string
+        }
+        Update: {
+          amount?: number
+          bar_night_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "individual_items_bar_night_id_fkey"
+            columns: ["bar_night_id"]
+            isOneToOne: false
+            referencedRelation: "bar_nights"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string
+          email: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          email: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          email?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

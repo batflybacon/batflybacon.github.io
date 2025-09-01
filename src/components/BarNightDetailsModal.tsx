@@ -5,27 +5,57 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { X, Users, Euro, Receipt } from "lucide-react";
+import { X, Users, Euro, Receipt, Edit2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Profile } from "@/hooks/useBarNights";
+import { BarNight, Profile } from "@/hooks/useBarNights";
 
-interface AddBarNightFormProps {
+interface BarNightDetailsModalProps {
+  barNight: BarNight;
   profiles: Profile[];
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onUpdate: (data: any) => void;
 }
 
-export default function AddBarNightForm({ profiles, onClose, onSubmit }: AddBarNightFormProps) {
-  const [totalAmount, setTotalAmount] = useState("");
-  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
-  const [paidBy, setPaidBy] = useState<{ [userId: string]: string }>({});
-  const [individualItems, setIndividualItems] = useState<Array<{
-    description: string;
-    amount: string;
-    participants: string[];
-  }>>([]);
+export default function BarNightDetailsModal({ 
+  barNight, 
+  profiles, 
+  onClose, 
+  onUpdate 
+}: BarNightDetailsModalProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [totalAmount, setTotalAmount] = useState(barNight.total_amount.toString());
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>(
+    barNight.participants.map(p => p.user_id)
+  );
+  const [paidBy, setPaidBy] = useState<{ [userId: string]: string }>(
+    Object.fromEntries(
+      barNight.payments.map(payment => [payment.payer_id, payment.amount.toString()])
+    )
+  );
+  const [individualItems, setIndividualItems] = useState(
+    barNight.individual_items.map(item => ({
+      description: item.description,
+      amount: item.amount.toString(),
+      participants: item.participants.map(p => p.user_id)
+    }))
+  );
   
   const { toast } = useToast();
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
 
   const handleParticipantToggle = (userId: string) => {
     setSelectedParticipants(prev => 
@@ -73,6 +103,7 @@ export default function AddBarNightForm({ profiles, onClose, onSubmit }: AddBarN
     }
 
     const data = {
+      id: barNight.id,
       totalAmount: parseFloat(totalAmount),
       participants: selectedParticipants,
       paidBy: Object.fromEntries(
@@ -85,15 +116,104 @@ export default function AddBarNightForm({ profiles, onClose, onSubmit }: AddBarN
         ...item,
         amount: parseFloat(item.amount)
       })),
-      date: new Date().toISOString()
+      date: barNight.date
     };
 
-    onSubmit(data);
+    onUpdate(data);
+    setIsEditing(false);
     toast({
       title: "Erfolg!",
-      description: "Bar-Abend wurde erfolgreich hinzugefügt.",
+      description: "Bar-Abend wurde erfolgreich aktualisiert.",
     });
   };
+
+  if (!isEditing) {
+    return (
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto">
+        <Card className="w-full max-w-md mt-4 mb-8">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-primary" />
+                Bar-Abend Details
+              </CardTitle>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
+                  <Edit2 className="w-4 h-4" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={onClose}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-sm text-muted-foreground">Datum</Label>
+              <p className="font-medium">{formatDate(barNight.date)}</p>
+            </div>
+
+            <div>
+              <Label className="text-sm text-muted-foreground">Gesamtkosten</Label>
+              <p className="text-xl font-bold text-primary">{formatCurrency(barNight.total_amount)}</p>
+            </div>
+
+            <Separator />
+
+            <div>
+              <Label className="text-sm text-muted-foreground">Teilnehmer ({barNight.participants.length})</Label>
+              <div className="space-y-1 mt-2">
+                {barNight.participants.map(participant => (
+                  <p key={participant.id} className="text-sm">{participant.display_name}</p>
+                ))}
+              </div>
+            </div>
+
+            {barNight.payments.length > 0 && (
+              <>
+                <Separator />
+                <div>
+                  <Label className="text-sm text-muted-foreground">Zahlungen</Label>
+                  <div className="space-y-1 mt-2">
+                    {barNight.payments.map(payment => (
+                      <div key={payment.payer_id} className="flex justify-between text-sm">
+                        <span>{payment.payer.display_name}</span>
+                        <span className="font-medium">{formatCurrency(payment.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {barNight.individual_items.length > 0 && (
+              <>
+                <Separator />
+                <div>
+                  <Label className="text-sm text-muted-foreground">Einzelposten</Label>
+                  <div className="space-y-2 mt-2">
+                    {barNight.individual_items.map(item => (
+                      <Card key={item.id} className="p-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium text-sm">{item.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.participants.map(p => p.display_name).join(', ')}
+                            </p>
+                          </div>
+                          <span className="font-medium text-sm">{formatCurrency(item.amount)}</span>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto">
@@ -101,10 +221,10 @@ export default function AddBarNightForm({ profiles, onClose, onSubmit }: AddBarN
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-primary" />
-              Neuer Bar-Abend
+              <Edit2 className="w-5 h-5 text-primary" />
+              Bar-Abend bearbeiten
             </CardTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
+            <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
               <X className="w-4 h-4" />
             </Button>
           </div>
@@ -117,16 +237,16 @@ export default function AddBarNightForm({ profiles, onClose, onSubmit }: AddBarN
                 <Euro className="w-4 h-4" />
                 Gesamtkosten *
               </Label>
-                <Input
-                  id="totalAmount"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={totalAmount}
-                  onChange={(e) => setTotalAmount(e.target.value)}
-                  required
-                  className="[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                />
+              <Input
+                id="totalAmount"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={totalAmount}
+                onChange={(e) => setTotalAmount(e.target.value)}
+                required
+                className="[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
             </div>
 
             <Separator />
@@ -247,11 +367,11 @@ export default function AddBarNightForm({ profiles, onClose, onSubmit }: AddBarN
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+              <Button type="button" variant="outline" onClick={() => setIsEditing(false)} className="flex-1">
                 Abbrechen
               </Button>
               <Button type="submit" className="flex-1">
-                Hinzufügen
+                Speichern
               </Button>
             </div>
           </form>
