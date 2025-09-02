@@ -54,59 +54,92 @@ export function useBarNights() {
     try {
       setLoading(true);
       
-      // Fetch bar nights with all related data
+      // Fetch bar nights first
       const { data: nights, error: nightsError } = await supabase
         .from('bar_nights')
-        .select(`
-          *,
-          bar_night_participants (
-            participant_id,
-            share_amount,
-            profiles (*)
-          ),
-          bar_night_payments (
-            payer_id,
-            amount,
-            profiles (*)
-          ),
-          individual_items (
-            id,
-            description,
-            amount,
-            individual_item_participants (
-              participant_id,
-              share_amount,
-              profiles (*)
-            )
-          )
-        `)
+        .select('*')
         .order('date', { ascending: false });
 
       if (nightsError) throw nightsError;
 
-      const formattedNights: BarNight[] = (nights || []).map(night => ({
-        id: night.id,
-        total_amount: Number(night.total_amount),
-        date: night.date,
-        created_by: night.created_by,
-        participants: night.bar_night_participants?.map((p: any) => p.profiles) || [],
-        payments: night.bar_night_payments?.map((p: any) => ({
-          payer_id: p.payer_id,
-          amount: Number(p.amount),
-          payer: p.profiles
-        })) || [],
-        individual_items: night.individual_items?.map((item: any) => ({
-          id: item.id,
-          description: item.description,
-          amount: Number(item.amount),
-          participants: item.individual_item_participants?.map((p: any) => p.profiles) || []
-        })) || []
-      }));
+      if (!nights || nights.length === 0) {
+        setBarNights([]);
+        calculateBalances([]);
+        return;
+      }
+
+      // Fetch all related data for each bar night
+      const formattedNights: BarNight[] = await Promise.all(
+        nights.map(async (night) => {
+          // Fetch participants
+          const { data: participants } = await supabase
+            .from('bar_night_participants')
+            .select(`
+              participant_id,
+              share_amount,
+              profiles!inner(*)
+            `)
+            .eq('bar_night_id', night.id);
+
+          // Fetch payments
+          const { data: payments } = await supabase
+            .from('bar_night_payments')
+            .select(`
+              payer_id,
+              amount,
+              profiles!inner(*)
+            `)
+            .eq('bar_night_id', night.id);
+
+          // Fetch individual items
+          const { data: items } = await supabase
+            .from('individual_items')
+            .select('*')
+            .eq('bar_night_id', night.id);
+
+          // Fetch item participants for each item
+          const individualItemsWithParticipants = await Promise.all(
+            (items || []).map(async (item) => {
+              const { data: itemParticipants } = await supabase
+                .from('individual_item_participants')
+                .select(`
+                  participant_id,
+                  share_amount,
+                  profiles!inner(*)
+                `)
+                .eq('individual_item_id', item.id);
+
+              return {
+                id: item.id,
+                description: item.description,
+                amount: Number(item.amount),
+                participants: (itemParticipants || []).map((p: any) => p.profiles)
+              };
+            })
+          );
+
+          return {
+            id: night.id,
+            total_amount: Number(night.total_amount),
+            date: night.date,
+            created_by: night.created_by,
+            participants: (participants || []).map((p: any) => p.profiles),
+            payments: (payments || []).map((p: any) => ({
+              payer_id: p.payer_id,
+              amount: Number(p.amount),
+              payer: p.profiles
+            })),
+            individual_items: individualItemsWithParticipants
+          };
+        })
+      );
 
       setBarNights(formattedNights);
       calculateBalances(formattedNights);
     } catch (error) {
       console.error('Error fetching bar nights:', error);
+      setBarNights([]);
+      calculateBalances([]);
     } finally {
       setLoading(false);
     }
