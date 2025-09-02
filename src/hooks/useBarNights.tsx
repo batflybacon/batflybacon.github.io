@@ -71,25 +71,54 @@ export function useBarNights() {
       // Fetch all related data for each bar night
       const formattedNights: BarNight[] = await Promise.all(
         nights.map(async (night) => {
-          // Fetch participants
-          const { data: participants } = await supabase
+          // Fetch participants - Join with profiles using user_id
+          const { data: participantData } = await supabase
             .from('bar_night_participants')
             .select(`
               participant_id,
-              share_amount,
-              profiles!inner(*)
+              share_amount
             `)
             .eq('bar_night_id', night.id);
 
+          // Get profile data for participants
+          let participants: Profile[] = [];
+          if (participantData && participantData.length > 0) {
+            const participantIds = participantData.map(p => p.participant_id);
+            const { data: participantProfiles } = await supabase
+              .from('profiles')
+              .select('*')
+              .in('user_id', participantIds);
+            
+            participants = participantProfiles || [];
+          }
+
           // Fetch payments
-          const { data: payments } = await supabase
+          const { data: paymentData } = await supabase
             .from('bar_night_payments')
             .select(`
               payer_id,
-              amount,
-              profiles!inner(*)
+              amount
             `)
             .eq('bar_night_id', night.id);
+
+          // Get profile data for payers
+          let payments: { payer_id: string; amount: number; payer: Profile }[] = [];
+          if (paymentData && paymentData.length > 0) {
+            const payerIds = paymentData.map(p => p.payer_id);
+            const { data: payerProfiles } = await supabase
+              .from('profiles')
+              .select('*')
+              .in('user_id', payerIds);
+
+            payments = paymentData.map(payment => {
+              const payer = (payerProfiles || []).find(profile => profile.user_id === payment.payer_id);
+              return {
+                payer_id: payment.payer_id,
+                amount: Number(payment.amount),
+                payer: payer || { id: '', user_id: payment.payer_id, display_name: 'Unknown', email: '' }
+              };
+            });
+          }
 
           // Fetch individual items
           const { data: items } = await supabase
@@ -100,20 +129,31 @@ export function useBarNights() {
           // Fetch item participants for each item
           const individualItemsWithParticipants = await Promise.all(
             (items || []).map(async (item) => {
-              const { data: itemParticipants } = await supabase
+              const { data: itemParticipantData } = await supabase
                 .from('individual_item_participants')
                 .select(`
                   participant_id,
-                  share_amount,
-                  profiles!inner(*)
+                  share_amount
                 `)
                 .eq('individual_item_id', item.id);
+
+              // Get profile data for item participants
+              let itemParticipants: Profile[] = [];
+              if (itemParticipantData && itemParticipantData.length > 0) {
+                const itemParticipantIds = itemParticipantData.map(p => p.participant_id);
+                const { data: itemParticipantProfiles } = await supabase
+                  .from('profiles')
+                  .select('*')
+                  .in('user_id', itemParticipantIds);
+                
+                itemParticipants = itemParticipantProfiles || [];
+              }
 
               return {
                 id: item.id,
                 description: item.description,
                 amount: Number(item.amount),
-                participants: (itemParticipants || []).map((p: any) => p.profiles)
+                participants: itemParticipants
               };
             })
           );
@@ -123,17 +163,14 @@ export function useBarNights() {
             total_amount: Number(night.total_amount),
             date: night.date,
             created_by: night.created_by,
-            participants: (participants || []).map((p: any) => p.profiles),
-            payments: (payments || []).map((p: any) => ({
-              payer_id: p.payer_id,
-              amount: Number(p.amount),
-              payer: p.profiles
-            })),
+            participants: participants,
+            payments: payments,
             individual_items: individualItemsWithParticipants
           };
         })
       );
 
+      console.log('Formatted nights:', formattedNights);
       setBarNights(formattedNights);
       calculateBalances(formattedNights);
     } catch (error) {
@@ -192,6 +229,7 @@ export function useBarNights() {
       balance: balanceMap.get(profile.user_id) || 0
     }));
 
+    console.log('Calculated balances:', balances);
     setUserBalances(balances);
   };
 
