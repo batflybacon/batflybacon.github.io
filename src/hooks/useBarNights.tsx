@@ -62,12 +62,12 @@ export function useBarNights() {
           bar_night_participants (
             participant_id,
             share_amount,
-            profiles!bar_night_participants_participant_id_fkey (*)
+            profiles (*)
           ),
           bar_night_payments (
             payer_id,
             amount,
-            profiles!bar_night_payments_payer_id_fkey (*)
+            profiles (*)
           ),
           individual_items (
             id,
@@ -76,7 +76,7 @@ export function useBarNights() {
             individual_item_participants (
               participant_id,
               share_amount,
-              profiles!individual_item_participants_participant_id_fkey (*)
+              profiles (*)
             )
           )
         `)
