@@ -8,7 +8,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onSignOut }: DashboardProps) {
-  const { userBalances, barNights, profiles, loading } = useBarNights();
+  const { userBalances, barNights, profiles, loading, updateBarNight } = useBarNights();
   const [selectedBarNight, setSelectedBarNight] = useState<BarNight | null>(null);
 
   const formatCurrency = (amount: number) => {
@@ -32,10 +32,13 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
     return "text-muted-foreground";
   };
 
-  const handleBarNightUpdate = (data: any) => {
-    // TODO: Implement update functionality
-    console.log("Update bar night:", data);
-    setSelectedBarNight(null);
+  const handleBarNightUpdate = async (data: any) => {
+    try {
+      await updateBarNight(data);
+      setSelectedBarNight(null);
+    } catch (error) {
+      console.error('Failed to update bar night:', error);
+    }
   };
 
   if (loading) {

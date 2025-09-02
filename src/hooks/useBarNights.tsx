@@ -332,12 +332,107 @@ export function useBarNights() {
     }
   }, [profiles]);
 
+  const updateBarNight = async (data: any) => {
+    if (!user) return;
+
+    try {
+      // Update bar night
+      const { error: nightError } = await supabase
+        .from('bar_nights')
+        .update({
+          total_amount: data.totalAmount,
+        })
+        .eq('id', data.id);
+
+      if (nightError) throw nightError;
+
+      // Delete existing participants, payments, and individual items
+      await Promise.all([
+        supabase.from('bar_night_participants').delete().eq('bar_night_id', data.id),
+        supabase.from('bar_night_payments').delete().eq('bar_night_id', data.id),
+        supabase.from('individual_item_participants').delete().in('individual_item_id', 
+          await supabase.from('individual_items').select('id').eq('bar_night_id', data.id).then(res => res.data?.map(item => item.id) || [])
+        ),
+        supabase.from('individual_items').delete().eq('bar_night_id', data.id)
+      ]);
+
+      const participantCount = data.participants.length;
+      const sharePerPerson = data.totalAmount / participantCount;
+
+      // Add new participants
+      const participantInserts = data.participants.map((participantId: string) => ({
+        bar_night_id: data.id,
+        participant_id: participantId,
+        share_amount: sharePerPerson
+      }));
+
+      const { error: participantsError } = await supabase
+        .from('bar_night_participants')
+        .insert(participantInserts);
+
+      if (participantsError) throw participantsError;
+
+      // Add new payments
+      if (Object.keys(data.paidBy).length > 0) {
+        const paymentInserts = Object.entries(data.paidBy).map(([userId, amount]) => ({
+          bar_night_id: data.id,
+          payer_id: userId,
+          amount: amount as number
+        }));
+
+        const { error: paymentsError } = await supabase
+          .from('bar_night_payments')
+          .insert(paymentInserts);
+
+        if (paymentsError) throw paymentsError;
+      }
+
+      // Add new individual items
+      if (data.individualItems && data.individualItems.length > 0) {
+        for (const item of data.individualItems) {
+          const { data: newItem, error: itemError } = await supabase
+            .from('individual_items')
+            .insert({
+              bar_night_id: data.id,
+              description: item.description,
+              amount: item.amount
+            })
+            .select()
+            .single();
+
+          if (itemError) throw itemError;
+
+          const itemParticipantCount = item.participants.length;
+          const itemSharePerPerson = item.amount / itemParticipantCount;
+
+          const itemParticipantInserts = item.participants.map((participantId: string) => ({
+            individual_item_id: newItem.id,
+            participant_id: participantId,
+            share_amount: itemSharePerPerson
+          }));
+
+          const { error: itemParticipantsError } = await supabase
+            .from('individual_item_participants')
+            .insert(itemParticipantInserts);
+
+          if (itemParticipantsError) throw itemParticipantsError;
+        }
+      }
+
+      await fetchBarNights();
+    } catch (error) {
+      console.error('Error updating bar night:', error);
+      throw error;
+    }
+  };
+
   return {
     barNights,
     userBalances,
     profiles,
     loading,
     createBarNight,
+    updateBarNight,
     refetch: fetchBarNights
   };
 }
