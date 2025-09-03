@@ -47,7 +47,7 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
         <img 
           src="/lovable-uploads/931e1ce0-926c-4d1d-8b5a-87400c5aa683.png" 
           alt="Loading..." 
-          className="w-32 h-32 -translate-y-10"
+          className="w-32 h-32 -translate-y-20"
           style={{
             animation: 'pulse 1.5s ease-in-out infinite alternate'
           }}
