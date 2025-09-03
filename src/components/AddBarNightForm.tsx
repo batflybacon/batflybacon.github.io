@@ -16,6 +16,7 @@ interface AddBarNightFormProps {
 }
 
 export default function AddBarNightForm({ profiles, onClose, onSubmit }: AddBarNightFormProps) {
+  const [name, setName] = useState("");
   const [totalAmount, setTotalAmount] = useState("");
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [paidBy, setPaidBy] = useState<{ [userId: string]: string }>({});
@@ -63,7 +64,7 @@ export default function AddBarNightForm({ profiles, onClose, onSubmit }: AddBarN
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!totalAmount || selectedParticipants.length === 0) {
+    if (!name.trim() || !totalAmount || selectedParticipants.length === 0) {
       toast({
         title: "Fehler",
         description: "Bitte fülle alle Pflichtfelder aus.",
@@ -72,7 +73,22 @@ export default function AddBarNightForm({ profiles, onClose, onSubmit }: AddBarN
       return;
     }
 
+    // Validate payment amounts don't exceed total
+    const totalPaid = Object.values(paidBy)
+      .filter(amount => amount && parseFloat(amount) > 0)
+      .reduce((sum, amount) => sum + parseFloat(amount), 0);
+    
+    if (totalPaid > parseFloat(totalAmount)) {
+      toast({
+        title: "Fehler",
+        description: "Die Summe der Zahlungen darf die Gesamtkosten nicht überschreiten.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const data = {
+      name: name.trim(),
       totalAmount: parseFloat(totalAmount),
       participants: selectedParticipants,
       paidBy: Object.fromEntries(
@@ -89,10 +105,6 @@ export default function AddBarNightForm({ profiles, onClose, onSubmit }: AddBarN
     };
 
     onSubmit(data);
-    toast({
-      title: "Erfolg!",
-      description: "Bar-Abend wurde erfolgreich hinzugefügt.",
-    });
   };
 
   return (
@@ -111,6 +123,22 @@ export default function AddBarNightForm({ profiles, onClose, onSubmit }: AddBarN
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Name */}
+            <div className="space-y-2">
+              <Label htmlFor="name" className="flex items-center gap-2">
+                <Receipt className="w-4 h-4" />
+                Name des Abends *
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="z.B. Freitag bei Max"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+
             {/* Total Amount */}
             <div className="space-y-2">
               <Label htmlFor="totalAmount" className="flex items-center gap-2">

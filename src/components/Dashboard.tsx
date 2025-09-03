@@ -116,8 +116,9 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">{formatDate(night.date)}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="font-medium">{night.name || "Bar-Abend"}</p>
+                    <p className="text-sm text-muted-foreground">{formatDate(night.date)}</p>
+                    <p className="text-xs text-muted-foreground">
                       {night.participants.length} Teilnehmer
                     </p>
                   </div>

@@ -67,7 +67,7 @@ const Index = () => {
         <Dashboard onSignOut={handleSignOut} />
       </div>
       
-      <FloatingActionButton onClick={() => setShowAddForm(true)} />
+      {!authLoading && <FloatingActionButton onClick={() => setShowAddForm(true)} />}
       
       {showAddForm && (
         <AddBarNightForm

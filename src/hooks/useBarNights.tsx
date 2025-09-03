@@ -11,6 +11,7 @@ export interface Profile {
 
 export interface BarNight {
   id: string;
+  name?: string;
   total_amount: number;
   date: string;
   created_by: string;
@@ -160,6 +161,7 @@ export function useBarNights() {
 
           return {
             id: night.id,
+            name: night.name,
             total_amount: Number(night.total_amount),
             date: night.date,
             created_by: night.created_by,
@@ -241,6 +243,7 @@ export function useBarNights() {
       const { data: newNight, error: nightError } = await supabase
         .from('bar_nights')
         .insert({
+          name: data.name,
           total_amount: data.totalAmount,
           date: new Date(data.date).toISOString().split('T')[0],
           created_by: user.id
@@ -340,6 +343,7 @@ export function useBarNights() {
       const { error: nightError } = await supabase
         .from('bar_nights')
         .update({
+          name: data.name,
           total_amount: data.totalAmount,
         })
         .eq('id', data.id);

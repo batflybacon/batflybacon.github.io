@@ -24,6 +24,7 @@ export default function BarNightDetailsModal({
   onUpdate 
 }: BarNightDetailsModalProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(barNight.name || "Bar-Abend");
   const [totalAmount, setTotalAmount] = useState(barNight.total_amount.toString());
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>(
     barNight.participants.map(p => p.user_id)
@@ -94,7 +95,7 @@ export default function BarNightDetailsModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!totalAmount || selectedParticipants.length === 0) {
+    if (!name.trim() || !totalAmount || selectedParticipants.length === 0) {
       toast({
         title: "Fehler",
         description: "Bitte fülle alle Pflichtfelder aus.",
@@ -103,8 +104,23 @@ export default function BarNightDetailsModal({
       return;
     }
 
+    // Validate payment amounts don't exceed total
+    const totalPaid = Object.values(paidBy)
+      .filter(amount => amount && parseFloat(amount) > 0)
+      .reduce((sum, amount) => sum + parseFloat(amount), 0);
+    
+    if (totalPaid > parseFloat(totalAmount)) {
+      toast({
+        title: "Fehler",
+        description: "Die Summe der Zahlungen darf die Gesamtkosten nicht überschreiten.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const data = {
       id: barNight.id,
+      name: name.trim(),
       totalAmount: parseFloat(totalAmount),
       participants: selectedParticipants,
       paidBy: Object.fromEntries(
@@ -122,10 +138,6 @@ export default function BarNightDetailsModal({
 
     onUpdate(data);
     setIsEditing(false);
-    toast({
-      title: "Erfolg!",
-      description: "Bar-Abend wurde erfolgreich aktualisiert.",
-    });
   };
 
   if (!isEditing) {
@@ -149,6 +161,11 @@ export default function BarNightDetailsModal({
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div>
+              <Label className="text-sm text-muted-foreground">Name</Label>
+              <p className="font-medium">{barNight.name || "Bar-Abend"}</p>
+            </div>
+
             <div>
               <Label className="text-sm text-muted-foreground">Datum</Label>
               <p className="font-medium">{formatDate(barNight.date)}</p>
@@ -232,6 +249,22 @@ export default function BarNightDetailsModal({
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Name */}
+            <div className="space-y-2">
+              <Label htmlFor="name" className="flex items-center gap-2">
+                <Receipt className="w-4 h-4" />
+                Name des Abends *
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="z.B. Freitag bei Max"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+
             {/* Total Amount */}
             <div className="space-y-2">
               <Label htmlFor="totalAmount" className="flex items-center gap-2">
