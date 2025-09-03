@@ -128,7 +128,14 @@ export default function Auth() {
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
-                "Lädt..."
+                <img 
+                  src="/lovable-uploads/931e1ce0-926c-4d1d-8b5a-87400c5aa683.png" 
+                  alt="Loading..." 
+                  className="w-4 h-4"
+                  style={{
+                    animation: 'pulse 1.5s ease-in-out infinite alternate'
+                  }}
+                />
               ) : isLogin ? (
                 <>
                   <LogIn className="w-4 h-4 mr-2" />

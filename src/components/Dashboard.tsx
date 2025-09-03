@@ -44,7 +44,14 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Lädt...</p>
+        <img 
+          src="/lovable-uploads/931e1ce0-926c-4d1d-8b5a-87400c5aa683.png" 
+          alt="Loading..." 
+          className="w-16 h-16"
+          style={{
+            animation: 'pulse 1.5s ease-in-out infinite alternate'
+          }}
+        />
       </div>
     );
   }
