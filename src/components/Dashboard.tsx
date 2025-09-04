@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useBarNights, UserBalance, BarNight } from "@/hooks/useBarNights";
 import BarNightDetailsModal from "./BarNightDetailsModal";
 
 interface DashboardProps {
   onSignOut: () => void;
+  onLoadingChange: (loading: boolean) => void;
 }
 
-export default function Dashboard({ onSignOut }: DashboardProps) {
-  const { userBalances, barNights, profiles, loading, updateBarNight } = useBarNights();
+export default function Dashboard({ onSignOut, onLoadingChange }: DashboardProps) {
+  const { userBalances, barNights, profiles, loading, updateBarNight, deleteBarNight } = useBarNights();
   const [selectedBarNight, setSelectedBarNight] = useState<BarNight | null>(null);
 
   const formatCurrency = (amount: number) => {
@@ -40,6 +41,19 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
       console.error('Failed to update bar night:', error);
     }
   };
+
+  const handleBarNightDelete = async (barNightId: string) => {
+    try {
+      await deleteBarNight(barNightId);
+      setSelectedBarNight(null);
+    } catch (error) {
+      console.error('Failed to delete bar night:', error);
+    }
+  };
+
+  useEffect(() => {
+    onLoadingChange(loading);
+  }, [loading, onLoadingChange]);
 
   if (loading) {
     return (
@@ -143,6 +157,7 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
           profiles={profiles}
           onClose={() => setSelectedBarNight(null)}
           onUpdate={handleBarNightUpdate}
+          onDelete={handleBarNightDelete}
         />
       )}
     </div>

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { X, Users, Euro, Receipt, Edit2 } from "lucide-react";
+import { X, Users, Euro, Receipt, Edit2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BarNight, Profile } from "@/hooks/useBarNights";
 
@@ -15,13 +15,15 @@ interface BarNightDetailsModalProps {
   profiles: Profile[];
   onClose: () => void;
   onUpdate: (data: any) => void;
+  onDelete: (barNightId: string) => void;
 }
 
 export default function BarNightDetailsModal({ 
   barNight, 
   profiles, 
   onClose, 
-  onUpdate 
+  onUpdate,
+  onDelete
 }: BarNightDetailsModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(barNight.name || "Bar-Abend");
@@ -154,6 +156,18 @@ export default function BarNightDetailsModal({
                 <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
                   <Edit2 className="w-4 h-4" />
                 </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    if (window.confirm('Bist du sicher, dass du diesen Abend löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+                      onDelete(barNight.id);
+                    }
+                  }}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
                 <Button variant="ghost" size="sm" onClick={onClose}>
                   <X className="w-4 h-4" />
                 </Button>
@@ -285,7 +299,7 @@ export default function BarNightDetailsModal({
 
             <Separator />
 
-            {/* Participants */}
+            {/* Participants with inline payment fields */}
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
@@ -302,38 +316,20 @@ export default function BarNightDetailsModal({
                     <Label htmlFor={`participant-${profile.id}`} className="flex-1">
                       {profile.display_name}
                     </Label>
+                    {selectedParticipants.includes(profile.user_id) && (
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Bezahlt"
+                        value={paidBy[profile.user_id] || ""}
+                        onChange={(e) => handlePaidByChange(profile.user_id, e.target.value)}
+                        className="w-20 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      />
+                    )}
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Who Paid */}
-            {selectedParticipants.length > 0 && (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <Label>Wer hat gezahlt? (Optional)</Label>
-                  <div className="space-y-2">
-                    {selectedParticipants.map((userId) => {
-                      const profile = profiles.find(u => u.user_id === userId);
-                      return (
-                        <div key={userId} className="flex items-center gap-2">
-                          <Label className="w-16 text-sm">{profile?.display_name}</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            value={paidBy[userId] || ""}
-                            onChange={(e) => handlePaidByChange(userId, e.target.value)}
-                            className="flex-1 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
 
             {/* Individual Items */}
             <Separator />

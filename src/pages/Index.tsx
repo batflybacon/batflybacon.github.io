@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
   const { user, signOut, loading: authLoading } = useAuth();
   const { profiles, createBarNight } = useBarNights();
   const navigate = useNavigate();
@@ -64,10 +65,10 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-6 pb-24">
-        <Dashboard onSignOut={handleSignOut} />
+        <Dashboard onSignOut={handleSignOut} onLoadingChange={setDashboardLoading} />
       </div>
       
-      {!authLoading && <FloatingActionButton onClick={() => setShowAddForm(true)} />}
+      {!authLoading && !dashboardLoading && <FloatingActionButton onClick={() => setShowAddForm(true)} />}
       
       {showAddForm && (
         <AddBarNightForm

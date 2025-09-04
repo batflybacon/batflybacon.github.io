@@ -430,6 +430,48 @@ export function useBarNights() {
     }
   };
 
+  const deleteBarNight = async (barNightId: string) => {
+    try {
+      if (!user) throw new Error('User not authenticated');
+
+      // Delete in the correct order to respect foreign key constraints
+      // First delete individual item participants
+      const { data: items } = await supabase
+        .from('individual_items')
+        .select('id')
+        .eq('bar_night_id', barNightId);
+
+      if (items && items.length > 0) {
+        const itemIds = items.map(item => item.id);
+        await supabase
+          .from('individual_item_participants')
+          .delete()
+          .in('individual_item_id', itemIds);
+      }
+
+      // Then delete individual items, participants, payments, and finally the bar night
+      await Promise.all([
+        supabase.from('individual_items').delete().eq('bar_night_id', barNightId),
+        supabase.from('bar_night_participants').delete().eq('bar_night_id', barNightId),
+        supabase.from('bar_night_payments').delete().eq('bar_night_id', barNightId)
+      ]);
+
+      // Finally delete the bar night itself
+      const { error: deleteError } = await supabase
+        .from('bar_nights')
+        .delete()
+        .eq('id', barNightId);
+
+      if (deleteError) throw deleteError;
+
+      await fetchBarNights();
+      return { error: null };
+    } catch (error) {
+      console.error('Error deleting bar night:', error);
+      return { error };
+    }
+  };
+
   return {
     barNights,
     userBalances,
@@ -437,6 +479,7 @@ export function useBarNights() {
     loading,
     createBarNight,
     updateBarNight,
+    deleteBarNight,
     refetch: fetchBarNights
   };
 }
