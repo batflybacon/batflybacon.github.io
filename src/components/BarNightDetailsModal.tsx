@@ -106,15 +106,21 @@ export default function BarNightDetailsModal({
       return;
     }
 
-    // Validate payment amounts don't exceed total
+    // Calculate total individual items cost
+    const totalIndividualItemsCost = individualItems
+      .filter(item => item.description && item.amount && item.participants.length > 0)
+      .reduce((sum, item) => sum + parseFloat(item.amount), 0);
+
+    // Validate payment amounts don't exceed total (including individual items)
     const totalPaid = Object.values(paidBy)
       .filter(amount => amount && parseFloat(amount) > 0)
       .reduce((sum, amount) => sum + parseFloat(amount), 0);
     
-    if (totalPaid > parseFloat(totalAmount)) {
+    const maxAllowedPayment = parseFloat(totalAmount) + totalIndividualItemsCost;
+    if (totalPaid > maxAllowedPayment) {
       toast({
         title: "Fehler",
-        description: "Die Summe der Zahlungen darf die Gesamtkosten nicht überschreiten.",
+        description: `Die Summe der Zahlungen darf ${maxAllowedPayment.toFixed(2)}€ nicht überschreiten (Gesamtkosten + Einzelposten).`,
         variant: "destructive",
       });
       return;

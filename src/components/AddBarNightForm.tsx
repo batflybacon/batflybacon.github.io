@@ -73,15 +73,21 @@ export default function AddBarNightForm({ profiles, onClose, onSubmit }: AddBarN
       return;
     }
 
-    // Validate payment amounts don't exceed total
+    // Calculate total individual items cost
+    const totalIndividualItemsCost = individualItems
+      .filter(item => item.description && item.amount && item.participants.length > 0)
+      .reduce((sum, item) => sum + parseFloat(item.amount), 0);
+
+    // Validate payment amounts don't exceed total (including individual items)
     const totalPaid = Object.values(paidBy)
       .filter(amount => amount && parseFloat(amount) > 0)
       .reduce((sum, amount) => sum + parseFloat(amount), 0);
     
-    if (totalPaid > parseFloat(totalAmount)) {
+    const maxAllowedPayment = parseFloat(totalAmount) + totalIndividualItemsCost;
+    if (totalPaid > maxAllowedPayment) {
       toast({
         title: "Fehler",
-        description: "Die Summe der Zahlungen darf die Gesamtkosten nicht überschreiten.",
+        description: `Die Summe der Zahlungen darf ${maxAllowedPayment.toFixed(2)}€ nicht überschreiten (Gesamtkosten + Einzelposten).`,
         variant: "destructive",
       });
       return;
@@ -159,7 +165,7 @@ export default function AddBarNightForm({ profiles, onClose, onSubmit }: AddBarN
 
             <Separator />
 
-            {/* Participants */}
+            {/* Participants and Payments */}
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
@@ -176,38 +182,23 @@ export default function AddBarNightForm({ profiles, onClose, onSubmit }: AddBarN
                     <Label htmlFor={`participant-${profile.id}`} className="flex-1">
                       {profile.display_name}
                     </Label>
+                    {selectedParticipants.includes(profile.user_id) && (
+                      <div className="flex items-center gap-2 ml-2">
+                        <Label className="text-sm whitespace-nowrap">hat gezahlt:</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={paidBy[profile.user_id] || ""}
+                          onChange={(e) => handlePaidByChange(profile.user_id, e.target.value)}
+                          className="w-20 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Who Paid */}
-            {selectedParticipants.length > 0 && (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <Label>Wer hat gezahlt? (Optional)</Label>
-                  <div className="space-y-2">
-                    {selectedParticipants.map((userId) => {
-                      const profile = profiles.find(u => u.user_id === userId);
-                      return (
-                        <div key={userId} className="flex items-center gap-2">
-                          <Label className="w-16 text-sm">{profile?.display_name}</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            value={paidBy[userId] || ""}
-                            onChange={(e) => handlePaidByChange(userId, e.target.value)}
-                            className="flex-1 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
 
             {/* Individual Items */}
             <Separator />

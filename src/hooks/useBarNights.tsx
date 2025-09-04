@@ -196,7 +196,7 @@ export function useBarNights() {
       const participantCount = night.participants.length;
       if (participantCount === 0) return;
 
-      // Calculate base share per participant
+      // Calculate base share per participant (only from total_amount, not including individual items)
       const baseSharePerPerson = night.total_amount / participantCount;
 
       // Each participant owes their base share
@@ -205,24 +205,24 @@ export function useBarNights() {
         balanceMap.set(participant.user_id, currentBalance - baseSharePerPerson);
       });
 
-      // Add payments (what people actually paid)
-      night.payments.forEach(payment => {
-        const currentBalance = balanceMap.get(payment.payer_id) || 0;
-        balanceMap.set(payment.payer_id, currentBalance + payment.amount);
-      });
-
-      // Handle individual items
+      // Handle individual items - each participant of an item owes their share
       night.individual_items.forEach(item => {
         const itemParticipantCount = item.participants.length;
         if (itemParticipantCount === 0) return;
 
         const sharePerPerson = item.amount / itemParticipantCount;
         
-        // Each participant of this item owes their share
+        // Each participant of this item owes their share (additional to base share)
         item.participants.forEach(participant => {
           const currentBalance = balanceMap.get(participant.user_id) || 0;
           balanceMap.set(participant.user_id, currentBalance - sharePerPerson);
         });
+      });
+
+      // Add payments (what people actually paid) - this covers both base costs and individual items
+      night.payments.forEach(payment => {
+        const currentBalance = balanceMap.get(payment.payer_id) || 0;
+        balanceMap.set(payment.payer_id, currentBalance + payment.amount);
       });
     });
 
